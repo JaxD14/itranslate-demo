@@ -1,0 +1,28 @@
+{
+  "name": "itranslate-demo",
+  "version": "1.0.0",
+  "description": "iTranslate Real-Time Translation Demo powered by AssemblyAI Universal Streaming",
+  "main": "dist/server.js",
+  "scripts": {
+    "build": "npx tsc",
+    "start": "node dist/server.js",
+    "dev": "npx ts-node src/server.ts"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.1",
+    "express": "^4.21.0",
+    "openai": "^4.82.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/ws": "^8.5.14",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.0"
+  }
+}
