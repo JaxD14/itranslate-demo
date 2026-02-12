@@ -1,0 +1,45 @@
+{
+  "$schema": "https://mintlify.com/schema.json",
+  "name": "iTranslate Demo",
+  "logo": {
+    "dark": "/logo/dark.svg",
+    "light": "/logo/light.svg"
+  },
+  "favicon": "/favicon.svg",
+  "colors": {
+    "primary": "#6e5afe",
+    "light": "#818cf8",
+    "dark": "#4c3399",
+    "anchors": {
+      "from": "#6e5afe",
+      "to": "#818cf8"
+    }
+  },
+  "topbarLinks": [
+    {
+      "name": "GitHub",
+      "url": "https://github.com"
+    }
+  ],
+  "tabs": [
+    {
+      "name": "Documentation",
+      "url": "/"
+    }
+  ],
+  "navigation": [
+    {
+      "group": "Overview",
+      "pages": ["introduction"]
+    },
+    {
+      "group": "Technical Deep Dive",
+      "pages": ["architecture", "pipeline", "edge-cases"]
+    },
+    {
+      "group": "Going Further",
+      "pages": ["production", "running"]
+    }
+  ],
+  "footerSocials": {}
+}

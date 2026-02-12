@@ -1,0 +1,47 @@
+---
+title: "Edge Cases"
+description: "What happens when things go wrong, and how I handle it."
+---
+
+## WiFi / network disconnection
+
+This is the big one for a device that depends on WiFi or cellular.
+
+- **Client-to-backend WebSocket drops:** the frontend auto-retries every 2 seconds and updates the UI to "Disconnected" so the user knows
+- **Backend-to-AssemblyAI WebSocket drops:** the backend sends a `status: disconnected` message to the client
+- **Client goes away entirely** (tab closed, device powered off): the backend sends a `Terminate` message to AssemblyAI to cleanly end the session -- otherwise it keeps running and billing. An `isCleaningUp` flag prevents cascading error noise during teardown
+- **What I'd add in production:** exponential backoff on reconnects, local audio buffering during outages, and a connection quality indicator on the device
+
+## End-of-turn detection
+
+Hardest UX problem for a translation device. Cut off too early and you get half a sentence. Wait too long and the conversation feels laggy.
+
+AssemblyAI gives three knobs:
+
+| Setting | Default | What it controls |
+|---------|---------|-----------------|
+| `end_of_turn_confidence_threshold` | 0.4 | How sure the model needs to be that the speaker is done |
+| `min_end_of_turn_silence_when_confident` | 400ms | Minimum silence before declaring end-of-turn |
+| `max_turn_silence` | 1280ms | Hard cap -- forces end-of-turn after this much silence |
+
+I exposed the confidence threshold as a UI slider in the demo. On the real device this would likely be a user setting or auto-tuned based on ambient noise.
+
+## Double end-of-turn messages
+
+With `format_turns=true`, each completed turn produces **two** end-of-turn messages from AssemblyAI -- one raw, one formatted. The code checks for both `end_of_turn === true` AND `turn_is_formatted === true` before triggering translation + TTS. Without this, every sentence gets processed twice.
+
+## TTS audio overlap
+
+If someone speaks fast or the network is slow, multiple translations can arrive while the first one is still playing. The client queues TTS clips and plays them sequentially -- each clip's `onended` event triggers the next one. If playback fails (browser autoplay policy, for example), it skips forward instead of getting stuck.
+
+## Session expiration
+
+AssemblyAI returns an `expires_at` timestamp when a streaming session starts. The demo displays this in the session info panel. In production, the backend should track this and spin up a new session before the current one expires.
+
+## Mic permission (demo-specific)
+
+If the browser denies mic access, the demo catches the error and shows "Mic access denied." Wouldn't apply to the real device (hardware mic is always available), but matters for the browser simulation.
+
+## Errors at any stage
+
+Translation or TTS API failures are caught and forwarded to the client as error messages. The UI displays them. Nothing crashes silently -- every failure is surfaced.

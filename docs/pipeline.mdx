@@ -1,0 +1,70 @@
+---
+title: "Pipeline"
+description: "How audio goes from the mic to translated speech, step by step."
+---
+
+## 1. Audio capture
+
+The browser (standing in for the device mic) captures mono audio at 16kHz. An `AudioWorkletProcessor` runs off the main thread and:
+
+- Receives 128-sample frames from the browser's audio pipeline
+- Accumulates them into **~200ms chunks** (3,200 samples at 16kHz)
+- Converts from float32 to **signed 16-bit PCM**
+- Posts each chunk to the main thread, which sends it over the WebSocket as binary
+
+**Why 200ms?** Smaller chunks mean more WebSocket messages and more framing overhead. Larger chunks add latency. 200ms is a good middle ground.
+
+I also enabled echo cancellation, noise suppression, and auto gain control on the mic input. The real device would have its own DSP pipeline for this, but the browser gives us these for free.
+
+## 2. Streaming to AssemblyAI
+
+The backend opens a WebSocket to AssemblyAI's streaming endpoint (`wss://streaming.assemblyai.com/v3/ws`) and forwards audio chunks as they arrive. The connection parameters:
+
+- **`speech_model: universal-streaming-multilingual`** -- handles multiple languages and auto-detects which one is being spoken
+- **`language_detection: true`** -- no need to specify the language upfront
+- **`format_turns: true`** -- gives us punctuated, capitalized final transcripts
+- **End-of-turn settings** (all configurable in the demo UI):
+  - `end_of_turn_confidence_threshold`: 0.4
+  - `min_end_of_turn_silence_when_confident`: 400ms
+  - `max_turn_silence`: 1280ms
+- **`keyterms_prompt`** (optional) -- domain-specific words to boost recognition accuracy
+
+Auth is via an `Authorization` header with the API key, set server-side.
+
+## 3. Handling transcripts
+
+AssemblyAI streams back `Turn` messages as the person speaks. Each message includes:
+
+- `transcript` -- the current text
+- `end_of_turn` -- whether the speaker finished
+- `turn_is_formatted` -- whether punctuation/capitalization has been applied
+- `language_code` -- detected language (e.g. `"en"`, `"es"`)
+- `language_confidence` -- model's confidence in the detection
+
+I forward every partial transcript to the client immediately so the text updates feel real-time. But I only trigger translation once I get a **formatted end-of-turn**.
+
+Why? With `format_turns=true`, AssemblyAI sends **two** end-of-turn messages per turn -- first a raw one, then a formatted one. The code gates on both `end_of_turn === true` AND `turn_is_formatted === true` before kicking off translation. Without this check, every utterance gets translated and spoken twice.
+
+## 4. Translation
+
+Once I have a finalized transcript, I determine the target language:
+
+- Detected language matches Language A? Translate to Language B.
+- Otherwise? Translate to Language A.
+
+Translation goes through OpenAI `gpt-4o-mini` with a system prompt: *"You are a professional translator. Return ONLY the translated text."* Temperature is 0.3 to keep things consistent -- you don't want creative translations in a real conversation.
+
+## 5. Text-to-speech
+
+The translated text goes to OpenAI's `tts-1` model. Each language gets a different voice so the output doesn't all sound identical:
+
+| Language | Voice |
+|----------|-------|
+| English | alloy |
+| Spanish | nova |
+| French | shimmer |
+| German | echo |
+| Italian | fable |
+| Portuguese | onyx |
+
+Audio comes back as MP3, gets base64-encoded, and is sent to the client. The client decodes it and plays through an `Audio` element (or, on the real device, the built-in speaker).

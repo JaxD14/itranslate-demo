@@ -1,0 +1,41 @@
+---
+title: "How I'd Build This"
+description: "A real-time translation pipeline for iTranslate's handheld device, powered by AssemblyAI."
+---
+
+## The problem
+
+iTranslate has a portable, battery-powered handheld translation device. Think Pocketalk form factor. It connects to the internet over WiFi or cellular, but it has **no GPU** -- no way to run model inference on-device.
+
+The device needs to:
+
+- Capture speech from a built-in mic
+- Transcribe it in real time
+- Detect which language is being spoken (no manual switching)
+- Translate into the other person's language
+- Speak the translation out loud
+
+Since there's no on-device compute, the entire STT-to-translation-to-TTS pipeline has to run in the cloud. The device is basically a thin client -- it streams audio out and gets results back.
+
+## My approach
+
+I built a working demo that simulates this end-to-end:
+
+1. **Audio capture** -- a browser mic standing in for the device's hardware mic
+2. **Real-time STT** -- AssemblyAI's Universal Streaming API with automatic language detection
+3. **Translation** -- OpenAI GPT-4o-mini
+4. **Text-to-speech** -- OpenAI TTS-1, with per-language voice mapping
+5. **Playback** -- translated audio plays back through the browser (standing in for the device speaker)
+
+The backend and all cloud service calls are identical to what production would look like. The only difference is what sits on the client side -- a browser instead of the real hardware.
+
+## Tech stack
+
+| Component | What I used | Why |
+|-----------|------------|-----|
+| STT | AssemblyAI Universal Streaming (Multilingual) | Real-time streaming with built-in language detection. No need to specify the language upfront. |
+| Translation | OpenAI GPT-4o-mini | Fast, low latency, good translation quality. |
+| TTS | OpenAI TTS-1 | Simple API, multiple voices, low latency. |
+| Server | Node.js + TypeScript | iTranslate said they're a Python/TypeScript shop. Node is great for WebSocket-heavy workloads. |
+| Frontend | Vanilla JS | Zero build step. Keeps the demo easy to run. |
+| Audio capture | Web Audio API (AudioWorklet) | Off-main-thread audio processing with precise control over sample rate and chunk size. |

@@ -1,0 +1,66 @@
+---
+title: "Running the Demo"
+description: "How to get the demo up and running locally."
+---
+
+## Prerequisites
+
+- Node.js 18+
+- An [AssemblyAI API key](https://www.assemblyai.com/dashboard/signup)
+- An [OpenAI API key](https://platform.openai.com/api-keys)
+
+## Setup
+
+```bash
+# Install dependencies
+npm install
+
+# Create your env file
+cp .env.example .env
+```
+
+Open `.env` and add your keys:
+
+```
+ASSEMBLYAI_API_KEY=your_key_here
+OPENAI_API_KEY=your_key_here
+PORT=3000
+```
+
+## Build and run
+
+```bash
+# Compile TypeScript
+npm run build
+
+# Start the server
+npm start
+```
+
+Open [http://localhost:3000](http://localhost:3000) in your browser. Click the mic button and start talking.
+
+## Development mode
+
+For live reloading during development:
+
+```bash
+npm run dev
+```
+
+## Project structure
+
+```
+itranslate-demo/
+  src/
+    server.ts           -- Backend: WebSocket relay, translation + TTS pipeline
+  public/
+    index.html          -- Frontend UI (device mockup)
+    app.js              -- Frontend logic (mic, WebSocket, UI updates)
+    audio-processor.js  -- AudioWorklet for PCM16 chunking
+    styles.css          -- Styling
+  dist/
+    server.js           -- Compiled server output
+  docs/
+    *.mdx               -- This documentation
+  .env.example          -- Environment variable template
+```

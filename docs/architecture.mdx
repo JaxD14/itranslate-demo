@@ -1,0 +1,44 @@
+---
+title: "Architecture"
+description: "How the system is designed for the real device, and how the demo simulates it."
+---
+
+## Production architecture (real device)
+
+On the actual hardware, the setup is straightforward:
+
+```
+iTranslate Device              Backend Service              Cloud APIs
+[Built-in Mic]                 [WebSocket Server]           [AssemblyAI STT]
+[Opus Encoder]  ──audio──>     [Pipeline Orchestrator]      [Translation API]
+[Speaker]       <──mp3────                                  [TTS API]
+                WiFi/Cellular
+```
+
+- The **device** captures audio from its mic, encodes it (likely Opus to save bandwidth), and streams it to a backend over WiFi or cellular
+- The **backend** is the orchestrator. It forwards audio to AssemblyAI for STT, sends the transcript to a translation API, generates TTS audio, and sends the result back to the device
+- The **device speaker** plays the translated audio
+- **API keys live on the backend**, never on the device. The device would authenticate with the backend using its own device credentials.
+
+## Demo architecture (browser simulation)
+
+I don't have the physical hardware, so I used a web browser to stand in for the device. Here's what maps to what:
+
+| On the real device | In the demo | Notes |
+|---|---|---|
+| Built-in mic | `getUserMedia()` | Browser prompts for mic permission; the real device wouldn't need that |
+| On-device audio encoder (Opus) | AudioWorklet (PCM16 at 16kHz) | Demo sends raw PCM16 instead of Opus. In production you'd use Opus to cut bandwidth -- AssemblyAI supports both. |
+| Built-in speaker | HTML5 `<audio>` element | Browser decodes base64 MP3 and plays it. Real device would pipe MP3 directly to its speaker. |
+| WiFi / cellular to remote backend | localhost WebSocket | Demo runs locally. Real device connects to a remote backend. |
+
+```
+Web Browser (simulates device)  Node.js Server               Cloud APIs
+[getUserMedia()]                [Same orchestrator logic]     [AssemblyAI STT]
+[AudioWorklet PCM16] ──audio──>                              [OpenAI Translation]
+[HTML5 Audio]        <──mp3────                              [OpenAI TTS]
+                     localhost
+```
+
+## The key point
+
+The backend and all cloud API calls are **identical** between demo and production. Swapping in the real device is purely a client-side change -- the server doesn't need to be rewritten. I designed it that way on purpose so the demo isn't throwaway work; it's a proof of concept for the actual deployment.

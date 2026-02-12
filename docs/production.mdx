@@ -1,0 +1,30 @@
+---
+title: "Production Improvements"
+description: "What I'd change before putting this on a real device at scale."
+---
+
+The demo proves the pipeline works end-to-end. Here's what I'd change to take it to production on the actual hardware.
+
+## Opus encoding
+
+The demo sends raw PCM16 audio, which works fine over localhost but is wasteful over a real network. Opus compression would cut bandwidth significantly -- important when the device is on a cellular connection. AssemblyAI's streaming API already supports Opus, so this is just a client-side change.
+
+## Streaming TTS
+
+Right now the backend waits for the full MP3 to come back from OpenAI before sending it to the client. OpenAI's TTS API supports streaming responses, so you could start playback while audio is still being generated. That would shave a few hundred milliseconds off perceived latency.
+
+## Dedicated translation API
+
+GPT-4o-mini works well for the demo and gives a lot of flexibility. At scale, a purpose-built translation API (DeepL, Google Translate) would be faster and cheaper per request. The tradeoff is less flexibility -- the LLM approach lets you handle nuance and context better, but for straightforward translation at volume, a dedicated service wins on cost and speed.
+
+## Reconnection with session persistence
+
+If the network blips for a second, the user shouldn't notice. Ideally the device buffers audio locally during the outage and replays it when connectivity returns. The backend should also track the AssemblyAI session and either resume it or seamlessly start a new one.
+
+## Connection quality monitoring
+
+Measure WebSocket round-trip latency and packet loss. If quality degrades, the device could:
+
+- Show a visual indicator so the user knows their connection is weak
+- Automatically switch from WiFi to cellular (or vice versa)
+- Temporarily reduce audio quality to stay within available bandwidth
