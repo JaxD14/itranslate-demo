@@ -1,46 +1,24 @@
 {
-  "$schema": "https://mintlify.com/schema.json",
+  "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
   "name": "iTranslate Demo",
-  "logo": {
-    "dark": "/logo/dark.svg",
-    "light": "/logo/light.svg"
-  },
-  "favicon": "/favicon.svg",
   "colors": {
-    "primary": "#6e5afe",
-    "light": "#818cf8",
-    "dark": "#4c3399",
-    "anchors": {
-      "from": "#6e5afe",
-      "to": "#818cf8"
-    }
+    "primary": "#6e5afe"
   },
-  "topbarLinks": [
-    {
-      "name": "GitHub",
-      "url": "https://github.com"
-    }
-  ],
-  "tabs": [
-    {
-      "name": "Documentation",
-      "url": "/"
-    }
-  ],
-  "navigation": [
-    {
-      "group": "Overview",
-      "pages": ["introduction"]
-    },
-    {
-      "group": "Technical Deep Dive",
-      "pages": ["architecture", "pipeline", "edge-cases"]
-    },
-    {
-      "group": "Going Further",
-      "pages": ["production", "running"]
-    }
-  ],
-  "footerSocials": {}
+  "navigation": {
+    "groups": [
+      {
+        "group": "Overview",
+        "pages": ["introduction"]
+      },
+      {
+        "group": "Technical Deep Dive",
+        "pages": ["architecture", "pipeline", "edge-cases"]
+      },
+      {
+        "group": "Going Further",
+        "pages": ["production", "running"]
+      }
+    ]
+  }
 }
