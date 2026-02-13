@@ -25,7 +25,7 @@ public static void main(String[] args) {
 }
 ```
 
-The class is named `Spanglish`, not `StreamingTranscription`. This is a straight-up compilation error -- the code never ran. My guess is it was copied from a template or refactored at some point and `main()` wasn't updated.
+The class is named `Spanglish`, not `StreamingTranscription`. This is a straight-up compilation error, the code never ran. My guess is it was copied from a template or refactored at some point and `main()` wasn't updated.
 
 ---
 
@@ -54,10 +54,10 @@ private static final String API_ENDPOINT = String.format(
 
 **What went wrong:** The URL declared `encoding=opus`, but the Streaming v3 API only supports two encodings:
 
-| Encoding | Description |
-|----------|-------------|
+| Encoding    | Description                                       |
+| ----------- | ------------------------------------------------- |
 | `pcm_s16le` | PCM signed 16-bit little-endian (the **default**) |
-| `pcm_mulaw` | PCM Mu-law |
+| `pcm_mulaw` | PCM Mu-law                                        |
 
 Opus is not a valid option. Meanwhile, the code captures audio like this:
 
@@ -71,7 +71,7 @@ AudioFormat format = new AudioFormat(
 );
 ```
 
-That's raw PCM signed 16-bit little-endian -- exactly `pcm_s16le`, which is the default. So the fix is simply to remove `encoding=opus`. No explicit encoding parameter needed.
+That's raw PCM signed 16-bit little-endian, exactly `pcm_s16le`, which is the default. So the fix is simply to remove `encoding=opus`. No explicit encoding parameter needed.
 
 The server was receiving raw PCM bytes but trying to interpret them as Opus frames. That produces nothing usable.
 
@@ -135,4 +135,4 @@ Compared to the original:
 wss://streaming.assemblyai.com/v3/ws?sample_rate=16000&encoding=opus&format_turns=true
 ```
 
-Everything else in the code -- the WebSocket handling, message parsing (`Begin`, `Turn`, `Termination`), WAV recording, cleanup logic -- was correct for the v3 API. The bugs were all in the configuration, not the implementation logic.
+Everything else in the code -- the WebSocket handling, message parsing (`Begin`, `Turn`, `Termination`), WAV recording, cleanup logic, was correct for the v3 API. The bugs were all in the configuration, not the implementation logic.
