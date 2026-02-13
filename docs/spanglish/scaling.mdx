@@ -8,9 +8,9 @@ description: "How Spanglish Inc. can reach 2,000 concurrent streaming sessions i
 AssemblyAI doesn't put a hard cap on total concurrent streams. Instead, it rate-limits **new session creation per minute** and auto-scales from there.
 
 | Account type | New sessions / minute | Total concurrent streams |
-|---|---|---|
-| Free | 5 | Limited |
-| Paid | 100+ (starting rate) | Unlimited (auto-scales) |
+| ------------ | --------------------- | ------------------------ |
+| Free         | 5                     | Limited                  |
+| Paid         | 100+ (starting rate)  | Unlimited (auto-scales)  |
 
 The auto-scaling logic:
 
@@ -24,9 +24,9 @@ The auto-scaling logic:
 
 For Spanglish Inc.'s target of 2,000 concurrent streams, here's what I'd recommend:
 
-### 1. Request a custom concurrency limit
+### 1. We need to set up a custom concurrency limit for them
 
-Contact AssemblyAI sales or email support@assemblyai.com. Custom session creation rates are available **at no extra cost** -- they just need to know the target workload. For 2,000 concurrent streams, a custom rate ensures you can ramp up without waiting for auto-scaling to catch up.
+Custom session creation rates are available **at no extra cost** -- they just need to know the target workload. For 2,000 concurrent streams, a custom rate ensures you can ramp up without waiting for auto-scaling to catch up.
 
 ### 2. Ramp up gradually
 
@@ -61,7 +61,7 @@ Pass the token via the `token` query parameter instead of the `Authorization` he
 
 ### 4. Implement reconnection logic
 
-At 2,000 concurrent streams, some connections **will** drop -- network blips, load balancer rotations, etc. Build retry logic with exponential backoff:
+At 2,000 concurrent streams, some connections **will** drop, network blips, load balancer rotations, etc. Build retry logic with exponential backoff:
 
 ```java
 int maxRetries = 5;
@@ -92,8 +92,8 @@ You can also set an `inactivity_timeout` (5-3600 seconds) as a safety net in the
 
 ## Rate limits to be aware of
 
-| Limit | Value |
-|-------|-------|
-| New streaming sessions / minute | 100+ (auto-scales, or custom) |
-| General API rate limit | 20,000 requests / 5 minutes |
-| Max session duration | Defined by `expires_at` in the `Begin` message |
+| Limit                           | Value                                          |
+| ------------------------------- | ---------------------------------------------- |
+| New streaming sessions / minute | 100+ (auto-scales, or custom)                  |
+| General API rate limit          | 20,000 requests / 5 minutes                    |
+| Max session duration            | Defined by `expires_at` in the `Begin` message |
