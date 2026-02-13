@@ -1,23 +1,28 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "theme": "mint",
-  "name": "iTranslate Demo",
+  "name": "AssemblyAI Take-Home",
   "colors": {
     "primary": "#6e5afe"
   },
   "navigation": {
     "groups": [
       {
-        "group": "Overview",
-        "pages": ["introduction"]
+        "group": "Part 1: iTranslate Demo",
+        "pages": ["introduction", "architecture", "pipeline", "edge-cases"]
       },
       {
-        "group": "Technical Deep Dive",
-        "pages": ["architecture", "pipeline", "edge-cases"]
-      },
-      {
-        "group": "Going Further",
+        "group": "Part 1: Going Further",
         "pages": ["production", "running"]
+      },
+      {
+        "group": "Part 2: Spanglish Inc.",
+        "pages": [
+          "spanglish/overview",
+          "spanglish/fixes",
+          "spanglish/scaling",
+          "spanglish/privacy"
+        ]
       }
     ]
   },

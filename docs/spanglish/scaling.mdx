@@ -1,0 +1,99 @@
+---
+title: "Scaling to 2,000 Streams"
+description: "How Spanglish Inc. can reach 2,000 concurrent streaming sessions in production."
+---
+
+## How AssemblyAI's concurrency works
+
+AssemblyAI doesn't put a hard cap on total concurrent streams. Instead, it rate-limits **new session creation per minute** and auto-scales from there.
+
+| Account type | New sessions / minute | Total concurrent streams |
+|---|---|---|
+| Free | 5 | Limited |
+| Paid | 100+ (starting rate) | Unlimited (auto-scales) |
+
+The auto-scaling logic:
+
+- When usage hits **70%+ of the current session creation rate**, the limit automatically **increases by 10% every 60 seconds**
+- When usage drops **below 50%**, limits scale back down to defaults
+- There's no cap on total concurrent streams -- only the rate of spinning up new ones
+
+**Example:** Starting at 100 new sessions/min, if you sustain 70%+ utilization for 5 minutes, you'd have ~610 total concurrent streams with 161 new sessions available the next minute.
+
+## Getting to 2,000
+
+For Spanglish Inc.'s target of 2,000 concurrent streams, here's what I'd recommend:
+
+### 1. Request a custom concurrency limit
+
+Contact AssemblyAI sales or email support@assemblyai.com. Custom session creation rates are available **at no extra cost** -- they just need to know the target workload. For 2,000 concurrent streams, a custom rate ensures you can ramp up without waiting for auto-scaling to catch up.
+
+### 2. Ramp up gradually
+
+Don't open all 2,000 connections at once. Ramp over several minutes:
+
+```
+Minute 0:   Open 100 sessions
+Minute 1:   Open 100 more (200 total)
+Minute 2:   Open 200 more (400 total)
+...
+Minute 5-6: Reach 2,000 total
+```
+
+This gives auto-scaling time to provision capacity smoothly, even with a custom limit.
+
+### 3. Use temporary auth tokens
+
+For production at scale, don't embed the API key in client code. Instead, generate short-lived tokens server-side:
+
+```bash
+curl -X POST "https://api.assemblyai.com/v2/realtime/token" \
+  -H "Authorization: YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"expires_in": 3600}'
+```
+
+Pass the token via the `token` query parameter instead of the `Authorization` header. Benefits:
+
+- API key never leaves the backend
+- Tokens auto-expire, limiting blast radius if leaked
+- Easier to rotate and revoke
+
+### 4. Implement reconnection logic
+
+At 2,000 concurrent streams, some connections **will** drop -- network blips, load balancer rotations, etc. Build retry logic with exponential backoff:
+
+```java
+int maxRetries = 5;
+int baseDelay = 1000; // 1 second
+
+for (int attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+        wsClient.connectBlocking();
+        break; // success
+    } catch (Exception e) {
+        int delay = baseDelay * (1 << attempt); // 1s, 2s, 4s, 8s, 16s
+        Thread.sleep(delay);
+    }
+}
+```
+
+### 5. Always send termination messages
+
+Billing is based on **session duration**. If a WebSocket drops without a `Terminate` message, the session may keep running until the inactivity timeout kicks in. At 2,000 streams, that adds up. Always send:
+
+```java
+JsonObject terminateMsg = new JsonObject();
+terminateMsg.addProperty("type", "Terminate");
+wsClient.send(gson.toJson(terminateMsg));
+```
+
+You can also set an `inactivity_timeout` (5-3600 seconds) as a safety net in the endpoint URL to auto-terminate idle sessions.
+
+## Rate limits to be aware of
+
+| Limit | Value |
+|-------|-------|
+| New streaming sessions / minute | 100+ (auto-scales, or custom) |
+| General API rate limit | 20,000 requests / 5 minutes |
+| Max session duration | Defined by `expires_at` in the `Begin` message |

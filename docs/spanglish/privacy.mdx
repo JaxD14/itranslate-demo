@@ -1,0 +1,74 @@
+---
+title: "Data Privacy"
+description: "How to reassure Spanglish Inc. that no customer data is retained by AssemblyAI."
+---
+
+## The concern
+
+Spanglish Inc. transcribes court proceedings -- sensitive legal conversations. They need to be confident that no audio or transcript data from their streams is being stored or used by AssemblyAI.
+
+## Streaming: zero data retention
+
+For streaming transcription, AssemblyAI offers **zero data retention** when the customer has opted out of model training. That means:
+
+| Data type | Retained? |
+|-----------|-----------|
+| Audio data | No -- not stored after the session ends |
+| Transcript data | No -- not stored after the session ends |
+| Session metadata (timestamps, duration, billing) | Yes -- retained for logging and billing |
+
+This is the default behavior for customers who opt out. No audio, no transcripts, no PII -- just metadata.
+
+## Model training
+
+AssemblyAI may use submitted data for model training, **but only as permitted by contract**, and with the following safeguards:
+
+- All training data undergoes **PII redaction** before use
+- Model training is **completely prohibited** if any of these apply:
+  - You have a **Business Associate Agreement (BAA)**
+  - You use **European servers** (`streaming.eu.assemblyai.com`)
+  - You have **opted out** of model training in your account settings
+
+For Spanglish Inc., I'd recommend opting out of model training at minimum. If they handle HIPAA-adjacent data, a BAA is the right move.
+
+## Additional compliance options
+
+### Business Associate Agreement (BAA)
+
+Available for customers handling protected health information or similarly sensitive data. A BAA guarantees:
+
+- Zero data retention (audio + transcripts)
+- No model training on your data
+- Contractual compliance obligations
+
+Court proceedings may not fall under HIPAA specifically, but a BAA provides the strongest contractual privacy guarantee AssemblyAI offers.
+
+### EU data residency
+
+If data sovereignty matters, Spanglish Inc. can route all traffic through AssemblyAI's EU endpoint:
+
+```
+wss://streaming.eu.assemblyai.com/v3/ws
+```
+
+This ensures audio is processed within the EU. All the same privacy guarantees apply, plus data never leaves EU infrastructure.
+
+### Data Processing Addendum (DPA)
+
+Available on request for additional contractual protections around how data is processed, stored, and deleted.
+
+### On-demand deletion
+
+Customers can request immediate deletion of any retained data at any time by contacting support@assemblyai.com.
+
+## What I told the customer
+
+In the customer email, I laid out:
+
+1. Streaming has zero data retention when opted out of model training
+2. Only session metadata is kept for billing
+3. A BAA is available and recommended for their use case
+4. EU residency is an option if needed
+5. They can request immediate data deletion at any time
+
+For court proceedings, the combination of **opt-out + BAA** gives them the strongest assurance: no audio stored, no transcripts stored, no model training, and a contractual guarantee backing all of it.

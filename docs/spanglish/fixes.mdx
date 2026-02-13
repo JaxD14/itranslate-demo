@@ -1,0 +1,138 @@
+---
+title: "The Fixes"
+description: "All five bugs in the customer's Java code, with before/after comparisons and explanations."
+---
+
+## Fix 1: Class name mismatch (compilation error)
+
+The `main()` method tried to instantiate a class that doesn't exist in the file.
+
+**Before:**
+
+```java
+public static void main(String[] args) {
+    StreamingTranscription transcription = new StreamingTranscription();
+    transcription.run();
+}
+```
+
+**After:**
+
+```java
+public static void main(String[] args) {
+    Spanglish transcription = new Spanglish();
+    transcription.run();
+}
+```
+
+The class is named `Spanglish`, not `StreamingTranscription`. This is a straight-up compilation error -- the code never ran. My guess is it was copied from a template or refactored at some point and `main()` wasn't updated.
+
+---
+
+## Fix 2: Invalid audio encoding (the main culprit)
+
+This is the bug that made everything appear completely broken.
+
+**Before:**
+
+```java
+private static final String API_ENDPOINT = String.format(
+    "wss://streaming.assemblyai.com/v3/ws?sample_rate=%d&encoding=opus&format_turns=true",
+    SAMPLE_RATE
+);
+```
+
+**After:**
+
+```java
+private static final String API_ENDPOINT = String.format(
+    "wss://streaming.assemblyai.com/v3/ws?sample_rate=%d&format_turns=true"
+        + "&speech_model=universal-streaming-multilingual&language_detection=true",
+    SAMPLE_RATE
+);
+```
+
+**What went wrong:** The URL declared `encoding=opus`, but the Streaming v3 API only supports two encodings:
+
+| Encoding | Description |
+|----------|-------------|
+| `pcm_s16le` | PCM signed 16-bit little-endian (the **default**) |
+| `pcm_mulaw` | PCM Mu-law |
+
+Opus is not a valid option. Meanwhile, the code captures audio like this:
+
+```java
+AudioFormat format = new AudioFormat(
+    SAMPLE_RATE,       // 16000 Hz
+    SAMPLE_SIZE_IN_BITS, // 16-bit
+    CHANNELS,          // mono
+    true,              // signed
+    false              // little-endian
+);
+```
+
+That's raw PCM signed 16-bit little-endian -- exactly `pcm_s16le`, which is the default. So the fix is simply to remove `encoding=opus`. No explicit encoding parameter needed.
+
+The server was receiving raw PCM bytes but trying to interpret them as Opus frames. That produces nothing usable.
+
+---
+
+## Fix 3: Wrong speech model
+
+**Before:** No `speech_model` parameter in the URL (defaults to `universal-streaming-english`).
+
+**After:** Added `speech_model=universal-streaming-multilingual`.
+
+Spanglish Inc.'s entire use case is bilingual English/Spanish court proceedings. The English-only model can't recognize Spanish at all. The [multilingual model](https://www.assemblyai.com/docs/speech-to-text/universal-streaming/multilingual-transcription) supports six languages (English, Spanish, French, German, Italian, Portuguese) and can handle code-switching between them in a single stream.
+
+Even after fixing the encoding bug, this would have been the next wall they hit -- Spanish speech would have been garbled or dropped entirely.
+
+---
+
+## Fix 4: Audio chunks too small
+
+**Before:**
+
+```java
+private static final int FRAMES_PER_BUFFER = 400; // 25ms of audio
+```
+
+**After:**
+
+```java
+private static final int FRAMES_PER_BUFFER = 3200; // 200ms of audio
+```
+
+At 16kHz, 400 frames = 25ms per chunk. The API requires chunks between **50ms and 1000ms**, with **100-450ms producing the best results**. 25ms is below the minimum.
+
+I went with 3,200 frames = 200ms, which is the same value I used in the iTranslate demo (see [Pipeline](/pipeline)). It's in the optimal range and balances latency against framing overhead.
+
+---
+
+## Fix 5: Missing language detection
+
+**Before:** No `language_detection` parameter (defaults to `false`).
+
+**After:** Added `language_detection=true` to the endpoint URL.
+
+This enables per-utterance language metadata in the API response. For court proceedings with an interpreter, knowing which language each turn was spoken in is valuable -- it helps distinguish between the original testimony and the interpretation.
+
+This isn't a "the code doesn't work" bug, but it's important for their use case.
+
+---
+
+## The corrected endpoint URL
+
+Putting it all together, the fixed endpoint looks like this:
+
+```
+wss://streaming.assemblyai.com/v3/ws?sample_rate=16000&format_turns=true&speech_model=universal-streaming-multilingual&language_detection=true
+```
+
+Compared to the original:
+
+```
+wss://streaming.assemblyai.com/v3/ws?sample_rate=16000&encoding=opus&format_turns=true
+```
+
+Everything else in the code -- the WebSocket handling, message parsing (`Begin`, `Turn`, `Termination`), WAV recording, cleanup logic -- was correct for the v3 API. The bugs were all in the configuration, not the implementation logic.

@@ -1,0 +1,43 @@
+---
+title: "What Happened"
+description: "A production customer reported our streaming product was completely broken. Here's how I triaged it."
+---
+
+## The situation
+
+While I was working on the iTranslate demo, a high-priority production customer -- Spanglish Inc. -- reached out saying our streaming product "doesn't work at all." They were at serious risk of churning.
+
+**Who is Spanglish Inc.?** They build note-takers for bilingual conversations (English and Spanish), like court proceedings with an interpreter present. They were already in production with our async API and were migrating to streaming.
+
+The Applied AI Engineer who normally handles this account was out of office. I jumped in.
+
+## What they sent us
+
+A Java WebSocket client (`Spanglish.java`) that connects to our Streaming v3 API, captures microphone audio, streams it for real-time transcription, and saves a local WAV recording. About 300 lines of code.
+
+## What I found
+
+After reviewing the code against our [Streaming v3 API docs](https://www.assemblyai.com/docs/api-reference/streaming), I identified **five bugs** -- all in the customer's client-side code. None in our API.
+
+| # | Bug | Severity | Why it matters |
+|---|-----|----------|----------------|
+| 1 | `main()` instantiates `StreamingTranscription` instead of `Spanglish` | Critical | Code doesn't compile |
+| 2 | `encoding=opus` in the endpoint URL | Critical | Opus isn't a valid v3 encoding -- server can't decode the audio |
+| 3 | No `speech_model` specified | Critical | Defaults to English-only, but they need English + Spanish |
+| 4 | `FRAMES_PER_BUFFER=400` (25ms chunks) | Medium | Below the API's 50ms minimum per message |
+| 5 | No `language_detection` enabled | Low | Misses per-utterance language metadata useful for bilingual transcripts |
+
+The encoding mismatch (bug 2) was the primary reason everything appeared completely broken. The code captures raw PCM16LE audio but tells the server it's Opus-encoded. The server tries to decode Opus frames, gets garbage, and produces no transcription.
+
+## The bottom line
+
+This is **not a bug in our API**. The Streaming v3 API behaved exactly as designed. All five issues are client-side misconfigurations. The fixes are straightforward -- see the next page.
+
+## What else the customer needs
+
+Beyond the code fix, Spanglish Inc. had two follow-up requests:
+
+1. **Scaling to 2,000 concurrent streams** -- they want to go big in production immediately
+2. **Data privacy reassurance** -- they need confidence that no customer data (court proceedings) is being retained
+
+I addressed both. Details in the [Scaling](/spanglish/scaling) and [Privacy](/spanglish/privacy) pages.
