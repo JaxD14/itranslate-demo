@@ -20,5 +20,8 @@
         "pages": ["production", "running"]
       }
     ]
+  },
+  "appearance": {
+    "default": "dark"
   }
 }
